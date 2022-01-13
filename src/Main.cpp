@@ -9,10 +9,14 @@ using namespace std;
 void menuGA()
 {
     Towns towns;
+    GeneticAlgorithm::MutationOperation operation = GeneticAlgorithm::SwapOperation;
     char filename[50];
-    int stop_time = 60;
+    int stop_time = 1; // 60
     int data_read_count = 0;
-    int population_size = 10;
+    int population_size = 10; // 1000
+    double mutation_coefficient = 0.001;
+    double crossover_coefficient = 0.8;
+    double temp;
     int action;
     int value;
     do
@@ -24,9 +28,18 @@ void menuGA()
         cout << "3 - Load data from file " << endl;
         cout << "4 - Modify stop time, current = " << stop_time << endl;
         cout << "5 - Modify population size, current = " << population_size << endl;
-        cout << "6 - Modify stop time, current = " << stop_time << endl;
-        cout << "7 - Modify stop time, current = " << stop_time << endl;
-        cout << "8 - Modify stop time, current = " << stop_time << endl;
+        cout << "6 - Modify mutation coefficient, current = " << mutation_coefficient << endl;
+        cout << "7 - Modify crossover coefficient, current = " << crossover_coefficient << endl;
+        cout << "8 - Modify mutation method, current = ";
+        switch (operation)
+        {
+        case 1:
+            cout << "Swap Operation" << endl;
+            break;
+        case 2:
+            cout << "Insert Operation" << endl;
+            break;
+        }
         cout << "9 - Exit the program " << endl;
         cout << "GA> ";
         cin >> action;
@@ -48,15 +61,15 @@ void menuGA()
             ga.startGA();
             std::chrono::steady_clock::time_point end =
                 std::chrono::steady_clock::now();
-            // ga.printRoute();
+            ga.printRoute();
             std::cout << "Execution time: "
                       << std::chrono::duration_cast<std::chrono::microseconds>(
                              end - start)
                              .count()
                       << "us\n";
             if (towns.getOptimalResult() != 0)
-                // cout << "Relative error: " << float(abs(ga.getRouteCost() - towns.getOptimalResult())) / towns.getOptimalResult() * 100 << "%" << endl;
-                break;
+                cout << "Relative error: " << float(abs(ga.getRouteCost() - towns.getOptimalResult())) / towns.getOptimalResult() * 100 << "%" << endl;
+            break;
         }
         case 2: // wyświetlenie danych
             if (towns.getTowns().empty())
@@ -98,10 +111,44 @@ void menuGA()
             population_size = value;
             break;
         case 6: // współczynnik mutacji
+            cout << "Enter new mutation coefficient: ";
+            cin >> temp;
+            if (temp <= 0 || cin.fail() || temp >= 1)
+            {
+                cout << "Invalid mutation coefficient" << endl;
+                break;
+            }
+            mutation_coefficient = temp;
             break;
         case 7: // współczynnik krzyżowania
+            cout << "Enter new crossover coefficient: ";
+            cin >> temp;
+            if (temp <= 0 || cin.fail() || temp >= 1)
+            {
+                cout << "Invalid crossover coefficient" << endl;
+                break;
+            }
+            crossover_coefficient = temp;
             break;
         case 8: // metoda mutacji
+            cout << "1 - Swap Operation" << endl;
+            cout << "2 - Insert Operation" << endl;
+            cout << "Enter new mutation operation: ";
+            cin >> value;
+            if (value <= 0 || cin.fail() || value >= 3)
+            {
+                cout << "Invalid mutation operation" << endl;
+                break;
+            }
+            switch (value)
+            {
+            case 1:
+                operation = GeneticAlgorithm::SwapOperation;
+                break;
+            case 2:
+                operation = GeneticAlgorithm::InsertOperation;
+                break;
+            }
             break;
         case 9: // wyjście
             break;
