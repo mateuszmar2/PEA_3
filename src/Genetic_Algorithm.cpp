@@ -18,6 +18,7 @@ GeneticAlgorithm::GeneticAlgorithm(vector<vector<int>> towns, int population_siz
 void GeneticAlgorithm::startGA()
 {
     chrono::system_clock::time_point start_time = chrono::system_clock::now();
+
     // vector<int> current_best_neighbour;
     // vector<int> current_best = randomRoute();
     // int current_best_cost = pathDistance(current_best);
@@ -29,7 +30,17 @@ void GeneticAlgorithm::startGA()
         int64_t time_diff = chrono::duration_cast<chrono::seconds>(chrono::system_clock::now() - start_time).count();
         if (time_diff >= stop_time)
             break;
-        
+        // utworzenie populacji
+        vector<pair<vector<int>, int>> population(population_size);
+        for (int i = 0; i < population_size; i++)
+        {
+            population[i].first = randomRoute();
+            population[i].second = pathDistance(population[i].first);
+            // for (auto j = 0; j < number_of_towns; j++)
+            //     cout << population[i].first[j] << " -> ";
+            // cout << population[i].first[number_of_towns] << endl;
+            // cout << "Pop_elem: " << i << ", Cost = " << population[i].second << endl;
+        }
     }
 }
 
@@ -54,7 +65,7 @@ int GeneticAlgorithm::randomIndex()
     return rand() % (number_of_towns - 1) + 1;
 }
 
-// zwraca losową ścieżit_without_changeę zaczynającą i kończącą się na 0
+// zwraca losową ścieżę zaczynającą i kończącą się na 0
 vector<int> GeneticAlgorithm::randomRoute()
 {
     vector<int> temp(number_of_towns + 1, 0);
@@ -74,5 +85,3 @@ void GeneticAlgorithm::printRoute()
     cout << route[route.size() - 1] << endl;
     cout << "Cost = " << route_cost << endl;
 }
-
-using namespace std;

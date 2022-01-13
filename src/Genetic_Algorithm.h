@@ -2,7 +2,6 @@
 #define GENETIC_ALGORITHM_H_
 
 #include <vector>
-#include "TSP_Algorithm.h"
 
 class GeneticAlgorithm
 {
@@ -22,7 +21,7 @@ private:
     int randomIndex();                                     // zwraca losowy indeks miasta
 
 public:
-    GeneticAlgorithm(vector<vector<int>> towns, int population_size, int stop_time);
+    GeneticAlgorithm(std::vector<std::vector<int>> towns, int population_size, int stop_time);
     void startGA();
     void printRoute(); // wyświela wynik
 };
