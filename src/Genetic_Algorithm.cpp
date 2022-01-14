@@ -7,18 +7,37 @@
 
 using namespace std;
 
-GeneticAlgorithm::GeneticAlgorithm(vector<vector<int>> towns, int population_size, int stop_time)
+GeneticAlgorithm::GeneticAlgorithm(vector<vector<int>> towns, int population_size, int stop_time, MutationOperation operation, double mutation_coefficient, double crossover_coefficient)
 {
     matrix = towns;
     number_of_towns = matrix[0].size();
     this->population_size = population_size;
     this->stop_time = stop_time;
+    this->operation = operation;
 }
 
 void GeneticAlgorithm::startGA()
 {
+    // rozpoczęcie pomiaru czasu
     chrono::system_clock::time_point start_time = chrono::system_clock::now();
 
+    // utworzenie populacji
+    vector<PopulationElement> population(population_size);
+    for (int i = 0; i < population_size; i++)
+    {
+        population[i].route = randomRoute();
+        population[i].cost = pathDistance(population[i].route);
+        if (population[i].cost < best_route_cost || i == 0) // zapisanie najlepszej ścieżki z populacji
+        {
+            best_route = population[i].route;
+            best_route_cost = population[i].cost;
+        }
+
+        // for (auto j = 0; j < number_of_towns; j++)
+        //     cout << population[i].first[j] << " -> ";
+        // cout << population[i].first[number_of_towns] << endl;
+        // cout << "Pop_elem: " << i << ", Cost = " << population[i].second << endl;
+    }
     // vector<int> current_best_neighbour;
     // vector<int> current_best = randomRoute();
     // int current_best_cost = pathDistance(current_best);
@@ -30,23 +49,38 @@ void GeneticAlgorithm::startGA()
         int64_t time_diff = chrono::duration_cast<chrono::seconds>(chrono::system_clock::now() - start_time).count();
         if (time_diff >= stop_time)
             break;
-        // utworzenie populacji
-        vector<pair<vector<int>, int>> population(population_size);
-        for (int i = 0; i < population_size; i++)
-        {
-            population[i].first = randomRoute();
-            population[i].second = pathDistance(population[i].first);
-            // for (auto j = 0; j < number_of_towns; j++)
-            //     cout << population[i].first[j] << " -> ";
-            // cout << population[i].first[number_of_towns] << endl;
-            // cout << "Pop_elem: " << i << ", Cost = " << population[i].second << endl;
-        }
     }
+}
+
+
+
+
+// przeprowadza mutację wybraną metodą oraz aktualizuje koszt ścieżki
+void GeneticAlgorithm::mutation(MutationOperation o, PopulationElement &elem)
+{
+    int first_rand_index = randomIndex();
+    int second_rand_index = randomIndex();
+    while (first_rand_index == second_rand_index) // wylosowane indeksy nie nogą być identyczne
+        second_rand_index = randomIndex();
+
+    switch (o)
+    {
+    case SwapOperation:
+        swap(elem.route[first_rand_index], elem.route[second_rand_index]); // zamiana wartości pod danymi indeksami
+        break;
+    case InsertOperation: // przeniesienie wartości wskazywanej przez pierwszy indeks w miejsce wskazywane przez drugi indeks
+        if (first_rand_index < second_rand_index)
+            rotate(elem.route.begin() + first_rand_index, elem.route.begin() + first_rand_index + 1, elem.route.begin() + second_rand_index + 1);
+        else
+            rotate(elem.route.begin() + second_rand_index, elem.route.begin() + first_rand_index, elem.route.begin() + first_rand_index + 1);
+        break;
+    }
+    elem.cost = pathDistance(elem.route);
 }
 
 int GeneticAlgorithm::getRouteCost()
 {
-    return route_cost;
+    return best_route_cost;
 }
 
 // zwraca długość trasy, trasa powinna zaczynać i kończyć się 0
@@ -80,8 +114,8 @@ vector<int> GeneticAlgorithm::randomRoute()
 // wypisuje trasę oraz koszt
 void GeneticAlgorithm::printRoute()
 {
-    for (auto i = 0; i < route.size() - 1; i++)
-        cout << route[i] << " -> ";
-    cout << route[route.size() - 1] << endl;
-    cout << "Cost = " << route_cost << endl;
+    for (auto i = 0; i < best_route.size() - 1; i++)
+        cout << best_route[i] << " -> ";
+    cout << best_route[best_route.size() - 1] << endl;
+    cout << "Cost = " << best_route_cost << endl;
 }
