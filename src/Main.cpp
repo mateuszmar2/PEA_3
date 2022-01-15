@@ -9,12 +9,13 @@ using namespace std;
 void menuGA()
 {
     Towns towns;
-    GeneticAlgorithm::MutationOperation operation = GeneticAlgorithm::SwapOperation;
+    int number_of_towns;
+    GeneticAlgorithm::MutationOperation mutation_operation = GeneticAlgorithm::SwapOperation;
+    GeneticAlgorithm::CrossoverOperation crossover_operation = GeneticAlgorithm::OrderCrossover;
     char filename[50];
-    int stop_time = 1; // 60
-    int data_read_count = 0;
-    int population_size = 10; // 1000
-    double mutation_coefficient = 0.001;
+    int stop_time = 1;          // 60
+    int population_size = 1000; // 1000
+    double mutation_coefficient = 0.01;
     double crossover_coefficient = 0.8;
     double temp;
     int action;
@@ -31,7 +32,7 @@ void menuGA()
         cout << "6 - Modify mutation coefficient, current = " << mutation_coefficient << endl;
         cout << "7 - Modify crossover coefficient, current = " << crossover_coefficient << endl;
         cout << "8 - Modify mutation method, current = ";
-        switch (operation)
+        switch (mutation_operation)
         {
         case 1:
             cout << "Swap Operation" << endl;
@@ -40,7 +41,17 @@ void menuGA()
             cout << "Insert Operation" << endl;
             break;
         }
-        cout << "9 - Exit the program " << endl;
+        cout << "9 - Modify crossover method, current = ";
+        switch (crossover_operation)
+        {
+        case 1:
+            cout << "Order crossover" << endl;
+            break;
+        case 2:
+            cout << "Partially matched crossover" << endl;
+            break;
+        }
+        cout << "0 - Exit the program " << endl;
         cout << "GA> ";
         cin >> action;
         cin.clear();
@@ -57,7 +68,14 @@ void menuGA()
             }
             std::chrono::steady_clock::time_point start =
                 std::chrono::steady_clock::now();
-            GeneticAlgorithm ga(towns.getTowns(), population_size, stop_time);
+            GeneticAlgorithm ga(
+                towns.getTowns(),
+                population_size,
+                stop_time,
+                mutation_operation,
+                crossover_operation,
+                mutation_coefficient,
+                crossover_coefficient);
             ga.startGA();
             std::chrono::steady_clock::time_point end =
                 std::chrono::steady_clock::now();
@@ -68,7 +86,9 @@ void menuGA()
                              .count()
                       << "us\n";
             if (towns.getOptimalResult() != 0)
-                cout << "Relative error: " << float(abs(ga.getRouteCost() - towns.getOptimalResult())) / towns.getOptimalResult() * 100 << "%" << endl;
+                cout << "Relative error: "
+                     << float(abs(ga.getRouteCost() - towns.getOptimalResult())) / towns.getOptimalResult() * 100
+                     << "%" << endl;
             break;
         }
         case 2: // wyświetlenie danych
@@ -84,11 +104,7 @@ void menuGA()
             cin >> filename;
             cout << endl;
             towns.loadDataFromFile(filename);
-            if (!towns.getTowns().empty() && data_read_count == 0)
-            {
-                data_read_count++;
-                int number_of_towns = towns.getTowns()[0].size();
-            }
+            number_of_towns = towns.getTowns()[0].size();
             break;
         case 4: // kryterium stopu
             cout << "Enter new stop time: ";
@@ -143,20 +159,40 @@ void menuGA()
             switch (value)
             {
             case 1:
-                operation = GeneticAlgorithm::SwapOperation;
+                mutation_operation = GeneticAlgorithm::SwapOperation;
                 break;
             case 2:
-                operation = GeneticAlgorithm::InsertOperation;
+                mutation_operation = GeneticAlgorithm::InsertOperation;
                 break;
             }
             break;
-        case 9: // wyjście
+        case 9: // metoda krzyżowania
+            cout << "1 - Order crossover" << endl;
+            cout << "2 - Partially matched crossover" << endl;
+            cout << "Enter new crossover operation: ";
+            cin >> value;
+            if (value <= 0 || cin.fail() || value >= 3)
+            {
+                cout << "Invalid crossover operation" << endl;
+                break;
+            }
+            switch (value)
+            {
+            case 1:
+                crossover_operation = GeneticAlgorithm::OrderCrossover;
+                break;
+            case 2:
+                crossover_operation = GeneticAlgorithm::PartiallyMatchedCrossover;
+                break;
+            }
+            break;
+        case 0: // wyjście
             break;
         default:
             cout << "Type appropriate number" << endl;
             break;
         }
-    } while (action != 9);
+    } while (action != 0);
 }
 
 int main()
