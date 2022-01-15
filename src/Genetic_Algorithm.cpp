@@ -3,19 +3,26 @@
 #include <chrono>
 #include <ctime>
 #include <math.h>  /* pow */
-#include <utility> // std::pair, std::make_pair
 
 #include "Genetic_Algorithm.h"
 
 using namespace std;
 
-GeneticAlgorithm::GeneticAlgorithm(vector<vector<int>> towns, int population_size, int stop_time, MutationOperation operation, double mutation_coefficient, double crossover_coefficient)
+GeneticAlgorithm::GeneticAlgorithm(
+    vector<vector<int>> towns,
+    int population_size,
+    int stop_time,
+    MutationOperation mutation_operation,
+    CrossoverOperation crossover_operation,
+    double mutation_coefficient,
+    double crossover_coefficient)
 {
     matrix = towns;
     number_of_towns = matrix[0].size();
     this->population_size = population_size;
     this->stop_time = stop_time;
-    this->operation = operation;
+    this->mutation_operation = mutation_operation;
+    this->crossover_operation = crossover_operation;
     this->mutation_coefficient = mutation_coefficient;
     this->crossover_coefficient = crossover_coefficient;
 }
@@ -28,19 +35,10 @@ void GeneticAlgorithm::startGA()
     // utworzenie populacji
     vector<PopulationElement> population(population_size);
     for (int i = 0; i < population_size; i++)
-    {
         population[i].route = randomRoute();
-        // for (auto j = 0; j < number_of_towns; j++)
-        //     cout << population[i].first[j] << " -> ";
-        // cout << population[i].first[number_of_towns] << endl;
-        // cout << "Pop_elem: " << i << ", Cost = " << population[i].second << endl;
-    }
-    // vector<int> current_best_neighbour;
-    // vector<int> current_best = randomRoute();
-    // int current_best_cost = pathDistance(current_best);
-    // route = current_best;
-    // route_cost = current_best_cost;
+
     vector<PopulationElement> next_population(population);
+
     while (true)
     {
         // jeżeli przekroczono dozwolony czas to przerwij
@@ -49,39 +47,42 @@ void GeneticAlgorithm::startGA()
             break;
 
         double max_fitness = 0.0;
+        // pętla obliczająca fitess oraz koszt i znajdujące najlepsze te wartości
         for (int i = 0; i < population_size; i++)
         {
             population[i].cost = pathDistance(population[i].route);
             population[i].fitness = pow((double)(1.0 / population[i].cost), 10);
-            // cout << population[i].fitness << ", " << population[i].cost << endl;
+
             if (population[i].fitness > max_fitness)
                 max_fitness = population[i].fitness;
-            if (population[i].cost < best.cost) // zapisanie najlepszej ścieżki z populacji
+
+            // zapisanie najlepszej ścieżki z populacji
+            if (population[i].cost < best.cost)
             {
                 best.route = population[i].route;
                 best.cost = population[i].cost;
-                // cout << best.cost << endl
-                // best.fitness = population[i].fitness;
             }
         }
         for (int i = 0; i < population_size; i++)
         {
             PopulationElement parent_a = selectElement(population, max_fitness);
             PopulationElement parent_b = selectElement(population, max_fitness);
+
             if ((double)rand() / RAND_MAX <= crossover_coefficient)
-                orderCrossover(parent_a.route, parent_b.route, next_population[i].route);
-            // orderCrossover(parent_a.route, parent_b.route, next_population[i].route);
+            {
+                crossover(parent_a.route, parent_b.route, next_population[i].route, crossover_operation);
+            }
             else
                 next_population[i] = parent_a;
 
             if ((double)rand() / RAND_MAX <= mutation_coefficient)
-                mutation(operation, next_population[i].route);
+                mutation(mutation_operation, next_population[i].route);
         }
-        // swap(population, next_population);
         population.swap(next_population);
     }
 }
 
+// wybór ruletkowy poprzez akceptację stochastyczną, zamiast przeszukiwania
 PopulationElement GeneticAlgorithm::selectElement(vector<PopulationElement> &population, double &max_fitness)
 {
     double r = (double)rand() / RAND_MAX;
@@ -93,109 +94,89 @@ PopulationElement GeneticAlgorithm::selectElement(vector<PopulationElement> &pop
     return population[i];
 }
 
-void GeneticAlgorithm::partiallyMatchedCrossover(vector<int> &parent_a, vector<int> &parent_b, vector<int> &offspring)
+void GeneticAlgorithm::crossover(
+    vector<int> &parent_a,
+    vector<int> &parent_b,
+    vector<int> &offspring,
+    CrossoverOperation &o)
 {
     int first_rand_index = randomIndex();
     int second_rand_index = randomIndex();
-    while (first_rand_index == second_rand_index) // wylosowane indeksy nie nogą być identyczne
+    // wylosowane indeksy nie nogą być identyczne
+    while (first_rand_index == second_rand_index)
         second_rand_index = randomIndex();
 
+    // pierwszy indeks musi być mniejszy
     if (first_rand_index > second_rand_index)
         swap(first_rand_index, second_rand_index);
 
     // przepisanie segmentu od rodzica
-    vector<bool> is_in_vector(number_of_towns, false);
+    vector<bool> is_in_offspring(number_of_towns, false);
     for (int i = first_rand_index; i <= second_rand_index; i++)
     {
         offspring[i] = parent_a[i];
-        is_in_vector[parent_a[i]] = true;
+        is_in_offspring[parent_a[i]] = true;
     }
-    for (int i = 1; i < offspring.size() - 1; i++)
+    // zależnie od wybranej metody krzyżowania
+    switch (o)
     {
-        // wartości pod tymi indeksami są już przepisane
-        if (i >= first_rand_index && i <= second_rand_index)
-            continue;
-
-        // jeżeli dana wartość nie została jeszcze wpisana
-        if (!is_in_vector[parent_b[i]])
+    // order crossover
+    case 1:
+    {
+        int iter_offspring = second_rand_index % (offspring.size() - 2);
+        int iter_parent_b = second_rand_index % (parent_b.size() - 2);
+        // w tym przypadku is_in_offspring przechowuje tylko dane z przypisania pierwszego bloku danych
+        // zmienne przechowujące indeks używany w danym vectorze
+        // dopóki pozostałe wartości nie zostaną przypisane
+        while (iter_offspring != first_rand_index - 1)
         {
-            offspring[i] = parent_b[i];
-            is_in_vector[parent_b[i]] = true;
-        }
-        // jeśli została już przypisana to to miejsce zostaje oznaczone jako do przypisania
-        else
-            offspring[i] = -1;
-    }
-    for (int i = 1; i < offspring.size() - 1; i++)
-    {
-        if (offspring[i] != -1)
-            continue;
+            // jeśli wartość już jest to szukaj na kolejnej pozycji
+            while (is_in_offspring[parent_b[iter_parent_b + 1]])
+                iter_parent_b = (iter_parent_b + 1) % (parent_b.size() - 2);
 
-        int temp = parent_b[i];
-        while (is_in_vector[temp])
-        {
-            // znajdz wartość temp w parent_a
-            vector<int>::iterator it = find(offspring.begin(), offspring.end(), temp);
-            // temp = wartość z parent_b pod indeksem temp w parent_a
-            temp = parent_b[it - offspring.begin()];
-        }
-        offspring[i] = temp;
-        is_in_vector[temp] = true;
-    }
-
-    // vector na wartości z wylosowanego fragmentu rodzica b, które nie zostały przepisane
-    // oraz wartości pod tym indeksem w rodzicu a
-    // vector<pair<int, int>> not_copied(second_rand_index - first_rand_index + 1, pair<int, int>(-1, -1));
-    // int j = 0;
-    // for (int i = first_rand_index; i <= second_rand_index; i++)
-    //     // jeżeli wartość z drugiego rodzica nie została przepisana
-    //     if (!is_in_vector[parent_b[i]])
-    //     {
-    //         not_copied[j].first = parent_b[i];
-    //         not_copied[j].second = parent_a[i];
-    //         j++;
-    //     }
-}
-
-void GeneticAlgorithm::orderCrossover(vector<int> &parent_a, vector<int> &parent_b, vector<int> &offspring)
-{
-    int first_rand_index = randomIndex();
-    int second_rand_index = randomIndex();
-    while (first_rand_index == second_rand_index) // wylosowane indeksy nie nogą być identyczne
-        second_rand_index = randomIndex();
-
-    if (first_rand_index > second_rand_index)
-        swap(first_rand_index, second_rand_index);
-
-    // przepisanie segmentu od rodzica
-    vector<bool> is_in_vector(number_of_towns, false);
-    for (int i = first_rand_index; i <= second_rand_index; i++)
-    {
-        offspring[i] = parent_a[i];
-        is_in_vector[parent_a[i]] = true;
-    }
-
-    // przepisanie pozostałych wartości
-    int iter_offspring = second_rand_index % (offspring.size() - 2);
-    int iter_parent_b = second_rand_index % (parent_b.size() - 2);
-    // int iter_parent_b = 0;
-
-    // while (iter_parent_b < parent_b.size() - 1)
-    while (iter_offspring != first_rand_index - 1)
-    {
-        // int temp = parent_b[iter_parent_b + 1];
-        // jeśli wartość już jest to szukaj kolejnej
-        while (is_in_vector[parent_b[iter_parent_b + 1]])
-        {
-            // iter_parent_b++;
+            // jeśli danej wartości jeszcze nie ma to przypisz i kontynuuj
+            offspring[iter_offspring + 1] = parent_b[iter_parent_b + 1];
+            iter_offspring = (iter_offspring + 1) % (offspring.size() - 2);
             iter_parent_b = (iter_parent_b + 1) % (parent_b.size() - 2);
-            // temp = parent_b[iter_parent_b];
         }
-        // jeśli danej wartości jeszcze nie ma to przypisz i kontynuuj
-        offspring[iter_offspring + 1] = parent_b[iter_parent_b + 1];
-        iter_offspring = (iter_offspring + 1) % (offspring.size() - 2);
-        iter_parent_b = (iter_parent_b + 1) % (parent_b.size() - 2);
-        // iter_parent_b++;
+        break;
+    }
+    // partially matched crossover
+    case 2:
+        for (int i = 1; i < offspring.size() - 1; i++)
+        {
+            // wartości pod tymi indeksami są już przepisane
+            if (i >= first_rand_index && i <= second_rand_index)
+                continue;
+
+            // jeżeli dana wartość nie została jeszcze wpisana
+            if (!is_in_offspring[parent_b[i]])
+            {
+                offspring[i] = parent_b[i];
+                is_in_offspring[parent_b[i]] = true;
+            }
+            // jeśli została już przypisana to to miejsce zostaje oznaczone jako do przypisania
+            else
+                offspring[i] = -1;
+        }
+        for (int i = 1; i < offspring.size() - 1; i++)
+        {
+            if (offspring[i] != -1)
+                continue;
+
+            int temp = parent_b[i];
+            // dopóki nie zostanie zostanie znaleziona wartość, której jeszcze nie ma
+            while (is_in_offspring[temp])
+            {
+                // znajdz wartość temp w parent_a
+                vector<int>::iterator it = find(parent_a.begin(), parent_a.end(), temp);
+                // wpisz do temp wartość z parent_b pod indeksem wskazywanym przez temp w parent_a
+                temp = parent_b[it - parent_a.begin()];
+            }
+            offspring[i] = temp;
+            is_in_offspring[temp] = true;
+        }
+        break;
     }
 }
 
@@ -227,7 +208,7 @@ int GeneticAlgorithm::getRouteCost()
 }
 
 // zwraca długość trasy, trasa powinna zaczynać i kończyć się 0
-int GeneticAlgorithm::pathDistance(vector<int> route_to_calculate)
+int GeneticAlgorithm::pathDistance(vector<int> &route_to_calculate)
 {
     int path_distance = 0;
     // zliczenie sumy odległości w ścieżce aż do danego wierzchołka

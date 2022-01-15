@@ -19,27 +19,43 @@ public:
         SwapOperation = 1,
         InsertOperation = 2
     };
+    enum CrossoverOperation
+    {
+        OrderCrossover = 1,
+        PartiallyMatchedCrossover = 2
+    };
 
 private:
     std::vector<std::vector<int>> matrix;
-    int number_of_towns; // ilość miast
-    int population_size; // rozmiar populacji
-    int stop_time;       // czas w sekundach po jakim algorytm się zatrzyma
-    PopulationElement best;
-    MutationOperation operation;
+    int number_of_towns;    // ilość miast
+    int population_size;    // rozmiar populacji
+    int stop_time;          // czas w sekundach po jakim algorytm się zatrzyma
+    PopulationElement best; // najlepszy znaleziony element element
+    MutationOperation mutation_operation;
+    CrossoverOperation crossover_operation;
     double mutation_coefficient;
     double crossover_coefficient;
 
-    void orderCrossover(std::vector<int> &parent_a, std::vector<int> &parent_b, std::vector<int> &offspring);
-    void partiallyMatchedCrossover(std::vector<int> &parent_a, std::vector<int> &parent_b, std::vector<int> &offspring);
+    void crossover(
+        std::vector<int> &parent_a,
+        std::vector<int> &parent_b,
+        std::vector<int> &offspring,
+        CrossoverOperation &crossover_operation);
     PopulationElement selectElement(std::vector<PopulationElement> &population, double &max_fitness);
     void mutation(MutationOperation &o, std::vector<int> &route);
-    std::vector<int> randomRoute();                        // zwraca losową ścieżkę zaczynającą i kończącą się na 0
-    int pathDistance(std::vector<int> route_to_calculate); // oblicza koszt ścieżki
-    int randomIndex();                                     // zwraca losowy indeks miasta
+    std::vector<int> randomRoute();                         // zwraca losową ścieżkę zaczynającą i kończącą się na 0
+    int pathDistance(std::vector<int> &route_to_calculate); // oblicza koszt ścieżki
+    int randomIndex();                                      // zwraca losowy indeks miasta
 
 public:
-    GeneticAlgorithm(std::vector<std::vector<int>> towns, int population_size, int stop_time, MutationOperation operation, double mutation_coefficient, double crossover_coefficient);
+    GeneticAlgorithm(
+        std::vector<std::vector<int>> towns,
+        int population_size,
+        int stop_time,
+        MutationOperation mutation_operation,
+        CrossoverOperation crossover_operation,
+        double mutation_coefficient,
+        double crossover_coefficient);
     void startGA();
     void printRoute();  // wyświela wynik
     int getRouteCost(); // zwraca najlepszą ścieżkę
