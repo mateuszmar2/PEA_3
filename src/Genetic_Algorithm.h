@@ -30,7 +30,8 @@ private:
     double mutation_coefficient;
     double crossover_coefficient;
 
-    void orderCrossover(std::vector<int> &parent_a, std::vector<int> &parent_b, std::vector<int> &child);
+    void orderCrossover(std::vector<int> &parent_a, std::vector<int> &parent_b, std::vector<int> &offspring);
+    void partiallyMatchedCrossover(std::vector<int> &parent_a, std::vector<int> &parent_b, std::vector<int> &offspring);
     PopulationElement selectElement(std::vector<PopulationElement> &population, double &max_fitness);
     void mutation(MutationOperation &o, std::vector<int> &route);
     std::vector<int> randomRoute();                        // zwraca losową ścieżkę zaczynającą i kończącą się na 0

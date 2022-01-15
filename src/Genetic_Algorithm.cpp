@@ -2,7 +2,8 @@
 #include <algorithm>
 #include <chrono>
 #include <ctime>
-#include <math.h> /* pow */
+#include <math.h>  /* pow */
+#include <utility> // std::pair, std::make_pair
 
 #include "Genetic_Algorithm.h"
 
@@ -69,6 +70,7 @@ void GeneticAlgorithm::startGA()
             PopulationElement parent_b = selectElement(population, max_fitness);
             if ((double)rand() / RAND_MAX <= crossover_coefficient)
                 orderCrossover(parent_a.route, parent_b.route, next_population[i].route);
+            // orderCrossover(parent_a.route, parent_b.route, next_population[i].route);
             else
                 next_population[i] = parent_a;
 
@@ -91,7 +93,7 @@ PopulationElement GeneticAlgorithm::selectElement(vector<PopulationElement> &pop
     return population[i];
 }
 
-void GeneticAlgorithm::orderCrossover(vector<int> &parent_a, vector<int> &parent_b, vector<int> &child)
+void GeneticAlgorithm::partiallyMatchedCrossover(vector<int> &parent_a, vector<int> &parent_b, vector<int> &offspring)
 {
     int first_rand_index = randomIndex();
     int second_rand_index = randomIndex();
@@ -105,17 +107,81 @@ void GeneticAlgorithm::orderCrossover(vector<int> &parent_a, vector<int> &parent
     vector<bool> is_in_vector(number_of_towns, false);
     for (int i = first_rand_index; i <= second_rand_index; i++)
     {
-        child[i] = parent_a[i];
+        offspring[i] = parent_a[i];
+        is_in_vector[parent_a[i]] = true;
+    }
+    for (int i = 1; i < offspring.size() - 1; i++)
+    {
+        // wartości pod tymi indeksami są już przepisane
+        if (i >= first_rand_index && i <= second_rand_index)
+            continue;
+
+        // jeżeli dana wartość nie została jeszcze wpisana
+        if (!is_in_vector[parent_b[i]])
+        {
+            offspring[i] = parent_b[i];
+            is_in_vector[parent_b[i]] = true;
+        }
+        // jeśli została już przypisana to to miejsce zostaje oznaczone jako do przypisania
+        else
+            offspring[i] = -1;
+    }
+    for (int i = 1; i < offspring.size() - 1; i++)
+    {
+        if (offspring[i] != -1)
+            continue;
+
+        int temp = parent_b[i];
+        while (is_in_vector[temp])
+        {
+            // znajdz wartość temp w parent_a
+            vector<int>::iterator it = find(offspring.begin(), offspring.end(), temp);
+            // temp = wartość z parent_b pod indeksem temp w parent_a
+            temp = parent_b[it - offspring.begin()];
+        }
+        offspring[i] = temp;
+        is_in_vector[temp] = true;
+    }
+
+    // vector na wartości z wylosowanego fragmentu rodzica b, które nie zostały przepisane
+    // oraz wartości pod tym indeksem w rodzicu a
+    // vector<pair<int, int>> not_copied(second_rand_index - first_rand_index + 1, pair<int, int>(-1, -1));
+    // int j = 0;
+    // for (int i = first_rand_index; i <= second_rand_index; i++)
+    //     // jeżeli wartość z drugiego rodzica nie została przepisana
+    //     if (!is_in_vector[parent_b[i]])
+    //     {
+    //         not_copied[j].first = parent_b[i];
+    //         not_copied[j].second = parent_a[i];
+    //         j++;
+    //     }
+}
+
+void GeneticAlgorithm::orderCrossover(vector<int> &parent_a, vector<int> &parent_b, vector<int> &offspring)
+{
+    int first_rand_index = randomIndex();
+    int second_rand_index = randomIndex();
+    while (first_rand_index == second_rand_index) // wylosowane indeksy nie nogą być identyczne
+        second_rand_index = randomIndex();
+
+    if (first_rand_index > second_rand_index)
+        swap(first_rand_index, second_rand_index);
+
+    // przepisanie segmentu od rodzica
+    vector<bool> is_in_vector(number_of_towns, false);
+    for (int i = first_rand_index; i <= second_rand_index; i++)
+    {
+        offspring[i] = parent_a[i];
         is_in_vector[parent_a[i]] = true;
     }
 
     // przepisanie pozostałych wartości
-    int iter_child = second_rand_index % (child.size() - 2);
+    int iter_offspring = second_rand_index % (offspring.size() - 2);
     int iter_parent_b = second_rand_index % (parent_b.size() - 2);
     // int iter_parent_b = 0;
 
     // while (iter_parent_b < parent_b.size() - 1)
-    while (iter_child != first_rand_index - 1)
+    while (iter_offspring != first_rand_index - 1)
     {
         // int temp = parent_b[iter_parent_b + 1];
         // jeśli wartość już jest to szukaj kolejnej
@@ -126,8 +192,8 @@ void GeneticAlgorithm::orderCrossover(vector<int> &parent_a, vector<int> &parent
             // temp = parent_b[iter_parent_b];
         }
         // jeśli danej wartości jeszcze nie ma to przypisz i kontynuuj
-        child[iter_child + 1] = parent_b[iter_parent_b + 1];
-        iter_child = (iter_child + 1) % (child.size() - 2);
+        offspring[iter_offspring + 1] = parent_b[iter_parent_b + 1];
+        iter_offspring = (iter_offspring + 1) % (offspring.size() - 2);
         iter_parent_b = (iter_parent_b + 1) % (parent_b.size() - 2);
         // iter_parent_b++;
     }
